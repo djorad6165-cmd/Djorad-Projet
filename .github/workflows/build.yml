@@ -30,10 +30,8 @@ jobs:
           requirements = python3,kivy
           orientation = portrait
           fullscreen = 0
-
           [buildozer]
           log_level = 2
-
           [app:android]
           android.permissions = INTERNET
           android.api = 33
@@ -41,11 +39,25 @@ jobs:
           android.sdk = 33
           android.ndk = 25b
           android.accept_sdk_license_agreement = True
+          p4a.bootstrap = sdl2
           EOF
-          cat buildozer.spec
           
-      - name: Build APK
-        run: buildozer android debug
+      - name: Build APK - First attempt to download SDK
+        run: |
+          buildozer android debug || true
+          
+      - name: Accept all Android licenses
+        run: |
+          mkdir -p ~/.android
+          touch ~/.android/repositories.cfg
+          SDKMANAGER=$(find ~/.buildozer -name sdkmanager | head -1)
+          echo "Found sdkmanager at $SDKMANAGER"
+          yes | $SDKMANAGER --licenses || true
+          yes | $SDKMANAGER "build-tools;33.0.2" "platform-tools" || true
+          
+      - name: Build APK - Final build
+        run: |
+          buildozer android debug
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
